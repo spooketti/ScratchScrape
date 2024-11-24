@@ -1,3 +1,12 @@
-import sqlalchemy
+import sqlalchemy as db
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
-db = sqlalchemy.create_engine("sqlite:///scratchData.db")
+engine = db.create_engine("sqlite:///scratchData.db")
+Session = sessionmaker(bind=engine)
+metaData = db.MetaData()
+Base = declarative_base()
+
+
+def init():
+    Base.metadata.create_all(engine)
