@@ -1,6 +1,6 @@
 import requests
 import sqlalchemy
-from init import init, Session
+from init import init, Session, db
 from model.user import User
 from model.project import Project
 import time
@@ -21,6 +21,7 @@ currentProjectIndex.close()
 
 
 projectApiLink = "https://api.scratch.mit.edu/projects/"
+userApiLink = "https://api.scratch.mit.edu/users/"
 testProjectID = [1072618379,938868806,983800322]
 
 def grabProjectData(projectID):
@@ -46,6 +47,30 @@ def grabProjectData(projectID):
     title=dbTitle,description=dbDesc,author=dbAuthor,createdOn=dbCreateOn,
     lastModified=dbLastMod,remixRoot=dbRemixRoot,views=dbViews,remixes=dbRemixes))
     session.commit()
+    grabUserData(dbAuthor)
+    
+def grabUserData(scratchun):
+    if bool(session.query(User).filter_by(username=scratchun).first()):
+        return
+    response = requests.get(userApiLink+str(scratchun))
+    if response.status_code != 200:
+        print("Unable to reach User")
+        print(response.text)
+        return
+    data = response.json()
+    dbProfileID = data["profile"]["id"]
+    dbUsername = scratchun
+    dbScratchTeam = data["scratchteam"]
+    dbjoinDate = data["history"]["joined"]
+    dbstatus = data["profile"]["status"]
+    dbBio = data["profile"]["bio"]
+    dbCountry = data["profile"]["country"]
+    
+    session.add(User(profileID=dbProfileID,username=dbUsername,
+    scratchteam=dbScratchTeam,joinDate = dbjoinDate,status=dbstatus,
+    bio=dbBio,country=dbCountry))
+    session.commit()
+    
     
 init()
 session = Session()
