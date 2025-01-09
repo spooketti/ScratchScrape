@@ -6,6 +6,7 @@ from model.project import Project
 import time
 import atexit
 import signal
+import os
 # from bs4 import BeautifulSoup
 
 # def grabDataFromURL(url):
@@ -42,12 +43,19 @@ def grabProjectData(projectID):
     dbRemixRoot = data["remix"]["root"]
     dbViews = data["stats"]["views"]
     dbRemixes = data["stats"]["remixes"]
+    projectToken = data["project_token"]
     
     session.add(Project(projectID=dbProjectID,
     title=dbTitle,description=dbDesc,author=dbAuthor,createdOn=dbCreateOn,
     lastModified=dbLastMod,remixRoot=dbRemixRoot,views=dbViews,remixes=dbRemixes))
     session.commit()
+    
+    grabProjectFile(projectID,projectToken)
     grabUserData(dbAuthor)
+    
+def grabProjectFile(projectID, projectToken):
+    filename = os.path.join("./projects/",str(projectID)+".json")
+    open(filename,"wb").write(requests.get("https://projects.scratch.mit.edu/"+str(projectID)+"?token="+str(projectToken)).content)
     
 def grabUserData(scratchun):
     if bool(session.query(User).filter_by(username=scratchun).first()):
