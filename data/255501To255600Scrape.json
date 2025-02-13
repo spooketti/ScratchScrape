@@ -1,0 +1,11 @@
+{
+    "repeat": 860,
+    "variables": 928,
+    "functions": 0,
+    "conditionals": 2494,
+    "arithmetic": 858,
+    "comparison": 1764,
+    "complexMath": 94,
+    "scriptCount": 5590,
+    "totalProjectsScraped": 296
+}
