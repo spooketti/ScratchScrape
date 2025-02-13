@@ -13,6 +13,26 @@ from init import init, Session, db
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+def prepareGUI():
+    # Create main window
+    root.title("Web Scrape")
+
+    # Create input fields and labels
+    tk.Label(root, text="Enter start index(Note that 5 years ago was 255000):").grid(row=0, column=0)
+    tk.Label(root, text="Enter end index:").grid(row=1, column=0)
+
+    entry1.grid(row=0, column=1)
+    entry2.grid(row=1, column=1)
+
+    status_label.grid(row=3, column=0, columnspan=2)
+
+    # Create button to calculate
+    button = tk.Button(root, text="Start", command=search)
+    button.grid(row=2, column=0, columnspan=2)
+
+    # Run the GUI
+    root.mainloop()
+
 def search():
     # sets the start and end link indexes
     start = (int)(entry1.get())
@@ -26,7 +46,11 @@ def search():
         
         # get page with studios for each class
         url = 'https://scratch.mit.edu/classes/'+ str(i) +'/studios/'
-        page = requests.get(url)
+        try:
+            page = requests.get(url)    
+        except:
+            continue
+
         
         # sleep delay to avoid getting flagged
         time.sleep(random.uniform(0.4, 0.6))
@@ -53,7 +77,10 @@ def search():
 
             # request projects from stdio
             url2 = 'https://api.scratch.mit.edu/studios/' + str(studio_number) + '/projects/'
-            page2 = requests.get(url2)
+            try:
+                page2 = requests.get(url2)
+            except:
+                continue
 
             # sleep delay to avoid getting flagged
             time.sleep(random.uniform(0.4, 0.6))
@@ -66,8 +93,11 @@ def search():
                 # with open("output.txt", "a") as file:
                 #     file.write(str(data['id']) + "\n")
                 logicComplexity["totalProjectsScraped"] += 1
-                curr_project = requests.get("https://api.scratch.mit.edu/projects/" + str(data['id'])).json()
-
+                try:
+                    curr_project = requests.get("https://api.scratch.mit.edu/projects/" + str(data['id'])).json()
+                except:
+                    continue
+                
                 # grabProjectData(curr_project['id'])
                 processProjectFile(curr_project['id'], curr_project['project_token'], start, end)
             
@@ -75,17 +105,6 @@ def search():
     
     root.destroy()
     graphAndSave(start, end)
-
-
-logicComplexity = {"repeat":0, #
-                   "variables":0,
-                   "functions":0,
-                   "conditionals":0,
-                   "arithmetic":0,
-                   "comparison":0, # < > =
-                   "complexMath":0, #anything in the menu that lets you do cos sin atan etc
-                   "scriptCount":0,
-                   "totalProjectsScraped":0} #defined by how many blocks have no parents (start of a script)
 
 def processProjectFile(projectId, projectToken, start, end):
     file = requests.get("https://projects.scratch.mit.edu/"+str(projectId)+"?token="+str(projectToken))
@@ -100,28 +119,45 @@ def processProjectFile(projectId, projectToken, start, end):
 
         for i in range(numOfSprites):
             def followCodeChain(blockData):
-                if(blockData["opcode"] in ["control_repeat","control_repeat_until"] ):
-                    logicComplexity["repeat"] += 1
-                #i dont know how to find functions so u can have fun james
-                
-                if(blockData["opcode"] in ["control_if", "control_if_else"]):
-                    logicComplexity["conditionals"] += 1
-                    
-                if(blockData["opcode"] in ["operator_add", "operator_subtract", "operator_multiply", "operator_divide"]):
-                    logicComplexity["arithmetic"] += 1
-                
-                if(blockData["opcode"] in ["operator_equals", "operator_lt", "operator_gt"]):
-                    logicComplexity["comparison"] += 1
-                    
-                if(blockData["opcode"] in ["operator_mathop"]):
-                    logicComplexity['complexMath'] += 1
-                
-                # followCodeChain(data["targets"][i]["blocks"][blockData["next"]])
-                
-            logicComplexity["variables"] += len(data["targets"][i]["variables"])
+                try:
+                    if(blockData["opcode"] in ["control_repeat","control_repeat_until"] ):
+                        logicComplexity["repeat"] += 1
+                except:
+                    logicComplexity["repeat"] += 0     
 
-            blocks = data['targets'][i]['blocks']
-            # print(data["targets"][i]["name"])
+                try:               
+                    if(blockData["opcode"] in ["control_if", "control_if_else"]):
+                        logicComplexity["conditionals"] += 1
+                except:
+                    logicComplexity["conditionals"] += 0
+                
+                try:
+                    if(blockData["opcode"] in ["operator_add", "operator_subtract", "operator_multiply", "operator_divide"]):
+                        logicComplexity["arithmetic"] += 1
+                except:
+                    logicComplexity["arithmetic"] += 0
+
+                try:        
+                    if(blockData["opcode"] in ["operator_equals", "operator_lt", "operator_gt"]):
+                        logicComplexity["comparison"] += 1
+                except:
+                    logicComplexity["comparison"] += 0
+
+                try:    
+                    if(blockData["opcode"] in ["operator_mathop"]):
+                        logicComplexity['complexMath'] += 1
+                except:
+                    logicComplexity["complexMath"] += 0
+                
+            try:
+                logicComplexity["variables"] += len(data["targets"][i]["variables"])
+            except:
+                logicComplexity["variables"] += 0
+            
+            try:
+                blocks = data['targets'][i]['blocks']
+            except:
+                blocks = []
             
             try:
                 blocks_with_no_parent = list(filter(lambda item: item[1].get("parent") is None, blocks.items()))
@@ -145,26 +181,6 @@ def graphAndSave(start, end):
     plt.title("Scratch User Project Complexity")
     plt.show()
 
-def scrape():
-    # Create main window
-    root.title("Web Scrape")
-
-    # Create input fields and labels
-    tk.Label(root, text="Enter start index(Note that 5 years ago was 255000):").grid(row=0, column=0)
-    tk.Label(root, text="Enter end index:").grid(row=1, column=0)
-
-    entry1.grid(row=0, column=1)
-    entry2.grid(row=1, column=1)
-
-    status_label.grid(row=3, column=0, columnspan=2)
-
-    # Create button to calculate
-    button = tk.Button(root, text="Start", command=search)
-    button.grid(row=2, column=0, columnspan=2)
-
-    # Run the GUI
-    root.mainloop()
-
 # init()
 # session = Session()
 
@@ -174,4 +190,14 @@ entry2 = tk.Entry(root)
 status_label = tk.Label(root, text="Waiting for Input")
 start, end = 0, 0
 
-scrape()
+logicComplexity = {"repeat":0, #
+                   "variables":0,
+                   "functions":0,
+                   "conditionals":0,
+                   "arithmetic":0,
+                   "comparison":0, # < > =
+                   "complexMath":0, #anything in the menu that lets you do cos sin atan etc
+                   "scriptCount":0,
+                   "totalProjectsScraped":0} #defined by how many blocks have no parents (start of a script)
+
+prepareGUI()
