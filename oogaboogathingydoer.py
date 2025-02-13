@@ -60,13 +60,15 @@ def search():
             for data in json_data:
                 # with open("output.txt", "a") as file:
                 #     file.write(str(data['id']) + "\n")
-
+                logicComplexity["totalProjectsScraped"] += 1
                 curr_project = requests.get("https://api.scratch.mit.edu/projects/" + str(data['id'])).json()
-                processProjectFile(curr_project['id'], curr_project['project_token'])
+                processProjectFile(curr_project['id'], curr_project['project_token'], start, end)
             
             # print("json data parse end")
     
     root.destroy()
+    graphAndSave(start, end)
+
 
 logicComplexity = {"repeat":0, #
                    "variables":0,
@@ -75,9 +77,10 @@ logicComplexity = {"repeat":0, #
                    "arithmetic":0,
                    "comparison":0, # < > =
                    "complexMath":0, #anything in the menu that lets you do cos sin atan etc
-                   "scriptCount":0} #defined by how many blocks have no parents (start of a script)
+                   "scriptCount":0,
+                   "totalProjectsScraped":0} #defined by how many blocks have no parents (start of a script)
 
-def processProjectFile(projectId, projectToken):
+def processProjectFile(projectId, projectToken, start, end):
     file = requests.get("https://projects.scratch.mit.edu/"+str(projectId)+"?token="+str(projectToken))
     data = file.json()
 
@@ -119,17 +122,19 @@ def processProjectFile(projectId, projectToken):
             for j in blocks:
                 followCodeChain(blocks[j])
 
-def graphAndSave():
+def graphAndSave(start, end):
     print(logicComplexity)
 
-    
+    filename = os.path.join("./projects/", str(start)+"To"+str(end)+"Scrape.json")
+    with open(filename, "w") as file:
+        json.dump(logicComplexity, file, indent=4)
 
     plt.bar(range(len(logicComplexity)), list(logicComplexity.values()), align='center')
     plt.xticks(range(len(logicComplexity)), list(logicComplexity.keys()))
     plt.title("Scratch User Project Complexity")
     plt.show()
 
-def gui():
+def scrape():
     # Create main window
     root.title("Web Scrape")
 
@@ -153,6 +158,6 @@ root = tk.Tk()
 entry1 = tk.Entry(root)
 entry2 = tk.Entry(root)
 status_label = tk.Label(root, text="Waiting for Input")
-gui()
+start, end = 0, 0
 
-graph()
+scrape()
