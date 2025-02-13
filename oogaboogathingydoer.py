@@ -5,8 +5,13 @@ import os
 import requests
 import re
 import random
+import sqlalchemy as db
 import time
 import tkinter as tk
+
+from init import init, Session, db
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 def search():
     # sets the start and end link indexes
@@ -62,6 +67,8 @@ def search():
                 #     file.write(str(data['id']) + "\n")
                 logicComplexity["totalProjectsScraped"] += 1
                 curr_project = requests.get("https://api.scratch.mit.edu/projects/" + str(data['id'])).json()
+
+                # grabProjectData(curr_project['id'])
                 processProjectFile(curr_project['id'], curr_project['project_token'], start, end)
             
             # print("json data parse end")
@@ -116,8 +123,12 @@ def processProjectFile(projectId, projectToken, start, end):
             blocks = data['targets'][i]['blocks']
             # print(data["targets"][i]["name"])
             
-            blocks_with_no_parent = list(filter(lambda item: item[1].get("parent") is None, blocks.items()))
-            logicComplexity["scriptCount"] += len(blocks_with_no_parent)
+            try:
+                blocks_with_no_parent = list(filter(lambda item: item[1].get("parent") is None, blocks.items()))
+            except:
+                logicComplexity["scriptCount"] += 0
+            else:
+                logicComplexity["scriptCount"] += len(blocks_with_no_parent)
             
             for j in blocks:
                 followCodeChain(blocks[j])
@@ -125,7 +136,7 @@ def processProjectFile(projectId, projectToken, start, end):
 def graphAndSave(start, end):
     print(logicComplexity)
 
-    filename = os.path.join("./projects/", str(start)+"To"+str(end)+"Scrape.json")
+    filename = os.path.join("./data/", str(start)+"To"+str(end)+"Scrape.json")
     with open(filename, "w") as file:
         json.dump(logicComplexity, file, indent=4)
 
@@ -153,6 +164,9 @@ def scrape():
 
     # Run the GUI
     root.mainloop()
+
+# init()
+# session = Session()
 
 root = tk.Tk()
 entry1 = tk.Entry(root)
