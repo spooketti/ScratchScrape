@@ -44,6 +44,8 @@ def search():
         status_label.config(text="Currently On Class:" + str(i))
         root.update()
         
+        print(i)
+
         # get page with studios for each class
         url = 'https://scratch.mit.edu/classes/'+ str(i) +'/studios/'
         try:
@@ -97,7 +99,7 @@ def search():
                     curr_project = requests.get("https://api.scratch.mit.edu/projects/" + str(data['id'])).json()
                 except:
                     continue
-                
+
                 # grabProjectData(curr_project['id'])
                 processProjectFile(curr_project['id'], curr_project['project_token'], start, end)
             
@@ -108,66 +110,69 @@ def search():
 
 def processProjectFile(projectId, projectToken, start, end):
     file = requests.get("https://projects.scratch.mit.edu/"+str(projectId)+"?token="+str(projectToken))
-    data = file.json()
-
     try:
-        numOfSprites = len(data['targets'])
+        data = file.json()
     except:
-        print("too old")
+        print("failed")
     else:
-        blocks_with_no_parent = list()
+        try:
+            numOfSprites = len(data['targets'])
+        except:
+            print("too old")
+        else:
+            blocks_with_no_parent = list()
 
-        for i in range(numOfSprites):
-            def followCodeChain(blockData):
+            for i in range(numOfSprites):
+                def followCodeChain(blockData):
+                    try:
+                        if(blockData["opcode"] in ["control_repeat","control_repeat_until"] ):
+                            logicComplexity["repeat"] += 1
+                    except:
+                        logicComplexity["repeat"] += 0     
+
+                    try:               
+                        if(blockData["opcode"] in ["control_if", "control_if_else"]):
+                            logicComplexity["conditionals"] += 1
+                    except:
+                        logicComplexity["conditionals"] += 0
+                    
+                    try:
+                        if(blockData["opcode"] in ["operator_add", "operator_subtract", "operator_multiply", "operator_divide"]):
+                            logicComplexity["arithmetic"] += 1
+                    except:
+                        logicComplexity["arithmetic"] += 0
+
+                    try:        
+                        if(blockData["opcode"] in ["operator_equals", "operator_lt", "operator_gt"]):
+                            logicComplexity["comparison"] += 1
+                    except:
+                        logicComplexity["comparison"] += 0
+
+                    try:    
+                        if(blockData["opcode"] in ["operator_mathop"]):
+                            logicComplexity['complexMath'] += 1
+                    except:
+                        logicComplexity["complexMath"] += 0
+                    
                 try:
-                    if(blockData["opcode"] in ["control_repeat","control_repeat_until"] ):
-                        logicComplexity["repeat"] += 1
+                    logicComplexity["variables"] += len(data["targets"][i]["variables"])
                 except:
-                    logicComplexity["repeat"] += 0     
-
-                try:               
-                    if(blockData["opcode"] in ["control_if", "control_if_else"]):
-                        logicComplexity["conditionals"] += 1
-                except:
-                    logicComplexity["conditionals"] += 0
+                    logicComplexity["variables"] += 0
                 
                 try:
-                    if(blockData["opcode"] in ["operator_add", "operator_subtract", "operator_multiply", "operator_divide"]):
-                        logicComplexity["arithmetic"] += 1
+                    blocks = data['targets'][i]['blocks']
                 except:
-                    logicComplexity["arithmetic"] += 0
-
-                try:        
-                    if(blockData["opcode"] in ["operator_equals", "operator_lt", "operator_gt"]):
-                        logicComplexity["comparison"] += 1
-                except:
-                    logicComplexity["comparison"] += 0
-
-                try:    
-                    if(blockData["opcode"] in ["operator_mathop"]):
-                        logicComplexity['complexMath'] += 1
-                except:
-                    logicComplexity["complexMath"] += 0
+                    blocks = []
                 
-            try:
-                logicComplexity["variables"] += len(data["targets"][i]["variables"])
-            except:
-                logicComplexity["variables"] += 0
-            
-            try:
-                blocks = data['targets'][i]['blocks']
-            except:
-                blocks = []
-            
-            try:
-                blocks_with_no_parent = list(filter(lambda item: item[1].get("parent") is None, blocks.items()))
-            except:
-                logicComplexity["scriptCount"] += 0
-            else:
-                logicComplexity["scriptCount"] += len(blocks_with_no_parent)
-            
-            for j in blocks:
-                followCodeChain(blocks[j])
+                try:
+                    blocks_with_no_parent = list(filter(lambda item: item[1].get("parent") is None, blocks.items()))
+                except:
+                    logicComplexity["scriptCount"] += 0
+                else:
+                    logicComplexity["scriptCount"] += len(blocks_with_no_parent)
+                
+                for j in blocks:
+                    followCodeChain(blocks[j])
 
 def graphAndSave(start, end):
     print(logicComplexity)
